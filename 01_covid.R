@@ -75,7 +75,7 @@ ColSideColors=c(rep("green",length(which.control)),
 o = order(rtt[,"dm"])
 plotdat = exprs(eset[egs.n[o],sel])
 labRowStr = AnnotationDbi::select(org.Hs.eg.db,
-      keys=rownames(plotdat), column=c("SYMBOL"))[,"SYMBOL"]
+      keys=rownames(plotdat), columns=c("SYMBOL"))[,"SYMBOL"]
 heatmap.2(plotdat, Rowv=F, Colv = F,
           dendrogram = "none", scale="row",
           trace="none",

@@ -55,8 +55,3 @@ names(pathways.list) = as.character(sapply(names(pathways.list), function(mystr)
   strsplit(mystr, split=":")[[1]][2]))
 pathways.list = sapply(pathways.list, function(mystr)
   strsplit(mystr, split=" - ")[[1]][1])
-
-# Get sepsis-associated module genelist
-net.dat <- read.table("../nibmg2020/Manuscript.adult.sepsis/Analysis/metadata/network_input.csv", sep="\t", header=T)
-net.list = with(net.dat, split(x=Egid, f=Process))
-rm(net.dat)

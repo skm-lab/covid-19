@@ -626,7 +626,8 @@ labRow = paste0(gsyms.nc,
 which.case = which(eset$Group=="nCOV")
 x11()
 x = exprs(eset[egs.nc,which.case])
-rownames(x) = gsyms.nc
+#rownames(x) = gsyms.nc
+rowsep = 1:nrow(x)
 heatmap.2(x, Rowv=T, Colv = F,
           dendrogram = "row", scale="row",
           trace="none",
@@ -635,10 +636,11 @@ heatmap.2(x, Rowv=T, Colv = F,
           key.title = " ",
           key.ylab = NULL,
           col = bluered(256),
-          margins = c(6,8),
+          margins = c(5,7),
           main = "",
           labRow = gsyms.nc,
 #          ColSideColors = ColSideColors,
           sepwidth = c(0.1,0.1),
           sepcolor = "white",
           rowsep = rowsep)
+

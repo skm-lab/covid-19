@@ -1,5 +1,6 @@
 # this is the code to analyse FACs data for Cytokine levels
 # Longitudinal analyses reveal immunological misfiring in severe COVID-19
+
 # Link to Article: https://pubmed.ncbi.nlm.nih.gov/32717743/
 # Article Published: 27 July 2020
 # samanwoy
@@ -10,40 +11,39 @@
 #------------------------------------
 library("readxl")
 library("ggplot2")
-
 #### Load the data ####
 #----------------------
 #dat = read_xlsx("C:/Users/Samanwoy/Dropbox/SKM_LAB/COVID-19/
 #Cytokine_levels_other_than_Gexp_Studies_2020/
 #Data_for_Reanalysis/41586_2020_2588_MOESM3_ESM.xlsx", sheet = 1, skip = 26)
 
-dat = read_xlsx("C:/Users/Samanwoy/Dropbox/SKM_LAB/COVID-19/Data/41586_2020_2588_MOESM3_ESM.xlsx", sheet = 1, skip = 26)
+load("Data/Lucas2020_FACS_data.rds")
 
 # > dat$ID[is.na(dat$`Clinical score`)]
 # [1] "Pt055.3" "Pt063.5"
-to.remove = which(dat$ID%in%c("Pt055.3", "Pt063.5"))
-dat = dat[-c(to.remove),]
+to.remove = which(datLucas$ID%in%c("Pt055.3", "Pt063.5"))
+datLucas = datLucas[-c(to.remove),]
 rm(to.remove)
 
-Group = rep("Control", nrow(dat))
-Group[which(dat$`Clinical score`=="1")] = "Moderate"
-Group[which(dat$`Clinical score`=="2")] = "Moderate"
-Group[which(dat$`Clinical score`=="3")] = "Moderate"
+Group = rep("Control", nrow(datLucas))
+Group[which(datLucas$`Clinical score`=="1")] = "Moderate"
+Group[which(datLucas$`Clinical score`=="2")] = "Moderate"
+Group[which(datLucas$`Clinical score`=="3")] = "Moderate"
 
-Group[which(dat$`Clinical score`=="4")] = "Severe"
-Group[which(dat$`Clinical score`=="5")] = "Severe"
+Group[which(datLucas$`Clinical score`=="4")] = "Severe"
+Group[which(datLucas$`Clinical score`=="5")] = "Severe"
 
 
 # Construct a day vector
 #------------------------
-day = rep("0", nrow(dat))
-token.dat = do.call(rbind, strsplit(dat$ID, ".", fixed = T))
+day = rep("0", nrow(datLucas))
+token.dat = do.call(rbind, strsplit(datLucas$ID, ".", fixed = T))
 day[which(sapply(token.dat[,2], function(x){nchar(x)}) == "1")] = token.dat[,2][which(sapply(token.dat[,2], function(x){nchar(x)}) == "1")]
 rm(token.dat)
 
 #### temporal line plot for IL6 gene ####
 #---------------------------------
-p4 = ggplot(dat, aes(x = day,
+p4 = ggplot(datLucas, aes(x = day,
                      y = IL6,
                      fill=Group)) +
   geom_boxplot(lwd = 0.05, width=0.99) +
@@ -55,3 +55,4 @@ p4 = ggplot(dat, aes(x = day,
   theme(legend.title = element_blank())
 # Print the plot
 print(p4)
+

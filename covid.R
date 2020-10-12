@@ -1,24 +1,11 @@
-# This code compares genes common between two COVID datasets
-# Then draws comparitive boxplots for theose common genes
-# samanwoy "Wed Jun 10 14:43:03 2020"
-# Modified by SKM on 03 Jul 2020
-# 14 Jul 2020: (1) Group-level testing for up-regulation
-#       establishes up-regulation of NETosis, not cytokines
-#       (2) Validatation of up-regulation in lung
-#       (3) Sample-level plots shows higher level in severe
-#       (4) Trajectories: transient or sustained up-regulation
-# 23 Jul 2020: Hypoxia associated gene exp in severe COVID-19
-# 22 Aug 2020: Started editing after discussion with SS
-#
+# Code for re-analysis of published host
+# transcriptome response to SARS-CoV-2
 #############################################################
-# code for NLR at
-# "C:/Users/Saroj/Dropbox/Work/SKM_LAB/COVID-19/Manuscript/Manuscript_22_08_20_SM"
 
-# Location: SKM_Lab/COVID-19
-rm(list = ls())
-graphics.off()
-gc()
-options(digits=2)
+# Instruction for running the code
+#---------------------------------
+# After you clone git repository
+# Location: /covid-19
 
 # Load the libraries
 #---------------------
@@ -113,23 +100,112 @@ graphics.off()
 # Result 03: Figure 3; NETosis in Lung
 #-----------------------------------------------------------
 # Validation of up-regulation in lung
-sel.egs = c("1378","5199","1511","7097",
-            "7099","6352","3689","1088")
+library(RColorBrewer)
+sel.egs = c("1378", "5199", "1511", "7097",
+            "7099", "6352", "3689", "1088")
 esetLung = ncov[[5]][sel.egs,]
-gsyms = as.character(links(org.Hs.egSYMBOL[sel.egs])[,"symbol"])
-xcon = rowMeans(exprs(esetLung[,esetLung$Group=="Zcontrol"]))
-xcas = rowMeans(exprs(esetLung[,esetLung$Group=="nCOV"]))
-gxp = data.frame("Control"=xcon, "COVID-19"=xcas)
-o = order(xcas)
-barplot(t(gxp[o,]), beside=TRUE, col=c("green","red"),
-        names=gsyms[o], main="NETosis gene expression in Lung",
-        ylab="Log (gene expression)",
-        las= 2,
-        ylim=c(0,max(gxp)+1))
-legend(x="topleft", legend=c("Control","COVID-19"),
-       fill=c("green","red"), bty="n")
+gsyms = as.character(links(org.Hs.egSYMBOL[sel.egs])[, "symbol"])
+
+featureNames(esetLung) = gsyms
+xcon = rowMeans(exprs(esetLung[, esetLung$Group == "Zcontrol"]))
+xcas = rowMeans(exprs(esetLung[, esetLung$Group == "nCOV"]))
+
+# Calculate p-value of t-test between mild and severe illness
+# for every NETosis gene
+pvals = apply(exprs(esetLung), 1, function(x) {
+  xcon = x[esetLung$Group != "nCOV"]
+  xcas = x[esetLung$Group == "nCOV"]
+  t.test(xcas, xcon,
+         alternative = "greater")$p.value
+})
+
+# bar graph of gene expression
+which.con = which(esetLung$Group == "Zcontrol")
+which.cas = which(esetLung$Group == "nCOV")
+x.con = rowMeans(exprs(esetLung[, which.con]))
+x.cas = rowMeans(exprs(esetLung[, which.cas]))
+sd.con = rowSds(exprs(esetLung[, which.con]))
+sd.cas = rowSds(exprs(esetLung[, which.cas]))
+plotdat = data.frame(x.con, x.cas)
+errordat = data.frame(sd.con, sd.cas)
+
+
+# Calculate p-value of t-test between mild and severe illness
+# for every NETosis gene
+pvals = apply(exprs(esetLung), 1, function(x) {
+  xcon = x[esetLung$Group != "nCOV"]
+  xcas = x[esetLung$Group == "nCOV"]
+  t.test(xcas, xcon,
+         alternative = "greater")$p.value
+})
+
+#re order the variables and plotdat
+#------------------------------------
+o = order(xcon)
+pvals = pvals[o]
+errordat = errordat[o,]
+plotdat = plotdat[o,]
+
+# Draw the plot
+#--------------
+b = barplot(
+  t(plotdat),
+  beside = T,
+  col = c("#FEE6CE", "#E6550D"),
+  las = 2,
+  ylim = c(0, max(plotdat) + 5.5),
+  main = "NETosis gene expression in Lung",
+  ylab = " Log (gene expression)"
+)
+legend(
+  x = "topleft",
+  legend = c("Healthy Lung", "COVID-19 Lung"),
+  fill = c("#FEE6CE", "#E6550D"),
+  bty = "n"
+)
 box()
-rm(esetLung, xcon, xcas, gxp, gsyms, sel.egs, o)
+pval.str = ifelse(pvals < 0.001, "***",
+                  ifelse(pvals < 0.01, "**",
+                         ifelse(pvals < 0.1, "*", "")))
+
+for (i in 1:nrow(plotdat)) {
+  text(
+    x = mean(b[, i]),
+    y = plotdat[i, "x.cas"] + 1,
+    labels = pval.str[i],
+    adj = 0.5
+  )
+  xpos.con = b[1, i]
+  ymin.con = plotdat[i, "x.con"]
+  ymax.con = plotdat[i, "x.con"] + errordat[i, "sd.con"]
+  lines(x = c(xpos.con, xpos.con),
+        y = c(ymin.con, ymax.con))
+  lines(
+    x = c(xpos.con - 0.25, xpos.con + 0.25),
+    y = c(ymax.con, ymax.con)
+  )
+
+  xpos.cas = b[2, i]
+  ymin.cas = plotdat[i, "x.cas"]
+  ymax.cas = plotdat[i, "x.cas"] + errordat[i, "sd.cas"]
+  lines(x = c(xpos.cas, xpos.cas),
+        y = c(ymin.cas, ymax.cas))
+  lines(
+    x = c(xpos.cas - 0.25, xpos.cas + 0.25),
+    y = c(ymax.cas, ymax.cas)
+  )
+}
+rm(
+  i,
+  pval.str,
+  pvals,
+  sd.cas,
+  which.cas,
+  x.cas,
+  xpos.con,
+  xpos.cas,
+  ymin.cas
+)
 graphics.off()
 
 #-----------------------------------------------------------
@@ -156,31 +232,69 @@ par(mfrow=c(3,3))
 for(eg in egs.sel) {
   x=as.numeric(exprs(eset.sub[eg,]))
   rval = cor(o2,x)
-  par(mar = c(5, 4, 4, 4) + 0.5)
-  plot(x=day, y=o2, pch = 16, col = "red",
-       xlab="Day post-onset of illness", ylab="",
-       cex.lab=1, cex.main=2.5,
-       main=paste0(get(eg,org.Hs.egSYMBOL)),
-       type="o", lwd=4, cex=2, axes=F)
-  legend("topright", bty="n",
-    legend=paste0("r = ", formatC(rval, digits=2)))
+  par(mar = c(5, 6, 4, 4) + 0.5)
+  plot(x=day,
+       y=o2,
+       pch = 16,
+       col = "red",
+       xlab="Day post-onset of illness",
+       ylab="",
+       cex.lab=1,
+       cex.main=2,
+       main=paste0(get(eg,org.Hs.egSYMBOL), ": ",
+                   paste0(" (r = ", formatC(rval, digits=2)), ")"),
+       type="o",
+       lwd=2,
+       cex=1.5,
+       axes=F)
+  #legend("topright", bty="n",
+  #  legend=paste0("r = ", formatC(rval, digits=2)))
   box(lwd=2)
   axis(1, lwd=2)
-  axis(2, col="red", lwd=2, cex=1.1, las=2)
-  mtext("Oxygen saturation (%)", side = 2,
-        line = 3, col="red", cex=0.8)
+  axis(2,
+       col="red",
+       lwd=2,
+       cex=1.1,
+       las=2)
+  mtext("Oxygen saturation (%)",
+        side = 2,
+        line = 3,
+        col="red",
+        cex=0.8)
   par(new = TRUE)
-  plot(x=day, y=x, pch = 15,
-       col = "blue", cex=2, lwd=4, type="o",
-       axes = FALSE, xlab = "", ylab = "")
-  axis(side = 4, at = pretty(range(x)), las=2,
-       col="blue", lwd=2, cex=1.1)
-  mtext("Log (gene expression)", side = 4, line = 3,
-        col="blue", cex=0.8)
+  plot(x=day,
+       y=x,
+       pch = 15,
+       col = "blue",
+       cex=1.5,
+       lwd=2,
+       type="o",
+       axes = FALSE,
+       xlab = "",
+       ylab = "")
+  axis(side = 4,
+       at = pretty(range(x)),
+       las=2,
+       col="blue",
+       lwd=2,
+       cex=1.1)
+  mtext("Log (gene expression)",
+        side = 4,
+        line = 3,
+        col="blue",
+        cex=0.8)
   #scan()
   #graphics.off()
 }
-rm(eg, egs.sel, rval, x, perc_o2, is.case1, day, eset.sub, o2)
+rm(eg,
+   egs.sel,
+   rval,
+   x,
+   perc_o2,
+   is.case1,
+   day,
+   eset.sub,
+   o2)
 
 
 #-----------------------------------------------------------
@@ -218,17 +332,16 @@ plotLogical = TRUE
 source("Rcode/analyse_NLR_in_Duke.R")
 box()
 mtext(side=3, text="B", cex=3, at=-2, line=1.5)
+#graphics.off()
 
-graphics.off()
 
 #-----------------------------------------------------------
 # Result 06: Figure 2B: Sample level
 # NETosis expression Association with severity
 #-----------------------------------------------------------
-# Create a small expression set with disease samples only
-which.mild = which(eset$Severity=="Moderate")
-which.severe = which(eset$Severity=="Severe")
-eset.sub = eset[egs.n,c(which.mild, which.severe)]
+which.mild = which(eset$Severity == "Moderate")
+which.severe = which(eset$Severity == "Severe")
+eset.sub = eset[egs.n, c(which.mild, which.severe)]
 rm(which.mild, which.severe)
 
 # ORder the genes by increasing gene expression
@@ -238,55 +351,80 @@ rm(o)
 
 # rename the mild samples as Zmild (instead of simply mild)
 # (helps with rowttests)
-eset.sub$Severity[eset.sub$Severity=="Moderate"] = "Zmild"
+eset.sub$Severity[eset.sub$Severity == "Moderate"] = "Zmild"
 
 # assign gene symbols as feature names
 gsyms.n = select(org.Hs.eg.db,
-  keys=featureNames(eset.sub), column=c("SYMBOL"))[,"SYMBOL"]
+                 keys = featureNames(eset.sub),
+                 columns = c("SYMBOL"))[, "SYMBOL"]
 featureNames(eset.sub) = gsyms.n
 rm(gsyms.n)
 
 # Calculate p-value of t-test between mild and severe illness
 # for every NETosis gene
 pvals = apply(exprs(eset.sub), 1, function(x) {
-  xmild = x[eset.sub$Severity!="Severe"]
-  xsevere = x[eset.sub$Severity=="Severe"]
+  xmild = x[eset.sub$Severity != "Severe"]
+  xsevere = x[eset.sub$Severity == "Severe"]
   t.test(xsevere, xmild,
          alternative = "greater")$p.value
 })
 
 # bar graph of gene expression
-which.mild = which(eset.sub$Severity=="Zmild")
-which.severe = which(eset.sub$Severity=="Severe")
-x.mild = rowMeans(exprs(eset.sub[ ,which.mild]))
-x.severe = rowMeans(exprs(eset.sub[ ,which.severe]))
-sd.mild = rowSds(exprs(eset.sub[ ,which.mild]))
-sd.severe = rowSds(exprs(eset.sub[ ,which.severe]))
+which.mild = which(eset.sub$Severity == "Zmild")
+which.severe = which(eset.sub$Severity == "Severe")
+x.mild = rowMeans(exprs(eset.sub[, which.mild]))
+x.severe = rowMeans(exprs(eset.sub[, which.severe]))
+sd.mild = rowSds(exprs(eset.sub[, which.mild]))
+sd.severe = rowSds(exprs(eset.sub[, which.severe]))
 plotdat = data.frame(x.mild, x.severe)
 errordat = data.frame(sd.mild, sd.severe)
-b = barplot(t(plotdat), beside=T, col=c("blue","red"),
-            ylim=c(0, max(plotdat)+1.5),
-            main="Association of NETosis gene expression with disease severity",
-            ylab=" Log (gene expression)")
-legend(x="topleft", legend=c("Moderate Illness","Severe Illness"),
-       fill=c("blue","red"), bty="n")
+b = barplot(
+  t(plotdat),
+  beside = T,
+  col = c("#FEE6CE", "#E6550D"),
+  las = 2,
+  ylim = c(0, max(plotdat) + 1.5),
+  main = "Association of NETosis gene expression with disease severity",
+  ylab = " Log (gene expression)"
+)
+legend(
+  x = "topleft",
+  legend = c("Moderate Illness", "Severe Illness"),
+  fill = c("#FEE6CE", "#E6550D"),
+  bty = "n"
+)
 box()
-pval.str = ifelse(pvals<0.001,"***",ifelse(pvals<0.01,"**",ifelse(pvals<0.1,"*","")))
+pval.str = ifelse(pvals < 0.001, "***", ifelse(pvals < 0.01, "**", ifelse(pvals <
+                                                                            0.1, "*", "")))
 
-for(i in 1:length(egs.n)) {
-  text(x=mean(b[,i]), y=plotdat[i,"x.severe"]+1, labels=pval.str[i], adj=0.5)
-  xpos.mild = b[1,i]
+for (i in 1:length(egs.n)) {
+  text(
+    x = mean(b[, i]),
+    y = plotdat[i, "x.severe"] + 1,
+    labels = pval.str[i],
+    adj = 0.5
+  )
+  xpos.mild = b[1, i]
   ymin.mild = plotdat[i, "x.mild"]
-  ymax.mild = plotdat[i, "x.mild"]+errordat[i,"sd.mild"]
-  lines(x=c(xpos.mild,xpos.mild), y=c(ymin.mild, ymax.mild))
-  lines(x=c(xpos.mild-0.25,xpos.mild+0.25), y=c(ymax.mild, ymax.mild))
+  ymax.mild = plotdat[i, "x.mild"] + errordat[i, "sd.mild"]
+  lines(x = c(xpos.mild, xpos.mild),
+        y = c(ymin.mild, ymax.mild))
+  lines(
+    x = c(xpos.mild - 0.25, xpos.mild + 0.25),
+    y = c(ymax.mild, ymax.mild)
+  )
 
-  xpos.severe = b[2,i]
+  xpos.severe = b[2, i]
   ymin.severe = plotdat[i, "x.severe"]
-  ymax.severe = plotdat[i, "x.severe"]+errordat[i,"sd.severe"]
-  lines(x=c(xpos.severe,xpos.severe), y=c(ymin.severe, ymax.severe))
-  lines(x=c(xpos.severe-0.25,xpos.severe+0.25), y=c(ymax.severe, ymax.severe))
+  ymax.severe = plotdat[i, "x.severe"] + errordat[i, "sd.severe"]
+  lines(x = c(xpos.severe, xpos.severe),
+        y = c(ymin.severe, ymax.severe))
+  lines(
+    x = c(xpos.severe - 0.25, xpos.severe + 0.25),
+    y = c(ymax.severe, ymax.severe)
+  )
 }
+
 rm(i, pval.str, pvals, sd.mild, sd.severe,
    which.mild, which.severe, x.mild, x.severe,
    xpos.mild, xpos.severe, ymin.mild, ymin.severe,
@@ -330,7 +468,7 @@ d8 = data.frame("Moderate"=as.numeric(exprs(eset[egs.n,"Case2_d8"])),
 d9 = data.frame("Moderate"=as.numeric(exprs(eset[egs.n,"Case2_d9"])),
                 "Severe"=as.numeric(exprs(eset[egs.n,"Case1_d9"])))
 gsyms.n = select(org.Hs.eg.db,
-    keys=egs.n, column=c("SYMBOL"))[,"SYMBOL"]
+    keys=egs.n, columns=c("SYMBOL"))[,"SYMBOL"]
 rownames(d6) = rownames(d7) = rownames(d8) = rownames(d9) = gsyms.n
 res = sapply(list(d6,d7,d8,d9), function(x)
   apply(x, 1, function(y) y[2]-y[1]))
@@ -383,7 +521,7 @@ rm(res, d6,d7,d8,d9, plotdat, i, gsyms.n)
 egs.hsa04610 = genes.by.pathway[["hsa04610"]]
 
 gsym.hsa04610 = select(org.Hs.eg.db, keys=egs.hsa04610,
-      column=c("SYMBOL", "GENENAME"))[,"GENENAME"]
+      columns=c("SYMBOL", "GENENAME"))[,"GENENAME"]
 which.complement = grep("complement", gsym.hsa04610)
 egs.complement = egs.hsa04610[which.complement]
 egs.complement = intersect(egs.complement, featureNames(eset))
@@ -475,13 +613,13 @@ cor.late.Case3 = apply(cytok.late.Case3, 1, function(x)
 cor.cytok = data.frame(cor.early.Case2, cor.late.Case2, cor.late.Case3,
                        cor.early.severe, cor.late.severe)
 rownames(cor.cytok) =  select(org.Hs.eg.db,
-    keys=rownames(cor.cytok), column=c("SYMBOL"))[,"SYMBOL"]
+    keys=rownames(cor.cytok), columns=c("SYMBOL"))[,"SYMBOL"]
 
 
 # hc with netosis and cytokine genes together
 egs.nc = c(egs.n, egs.cytok)
 gsyms.nc = select(org.Hs.eg.db,
-                  keys=egs.nc, column=c("SYMBOL"))[,"SYMBOL"]
+                  keys=egs.nc, columns=c("SYMBOL"))[,"SYMBOL"]
 labRow = paste0(gsyms.nc,
       c(rep("_NETO", length(egs.n)), rep("_CYTO", length(egs.cytok))))
 
@@ -503,25 +641,4 @@ heatmap.2(x, Rowv=T, Colv = F,
 #          ColSideColors = ColSideColors,
           sepwidth = c(0.1,0.1),
           sepcolor = "white",
-          rowsep = 1:nrow(x))
-
-
-# PCA of genes across samples
-# ------------------------------
-# which.sel = eset$ID=="Case3"
-# x = exprs(eset[egs.nc,which.sel])
-# rownames(x) = gsyms.nc
-# pc = prcomp(t(x))
-# par(mfrow=c(2,2))
-# plot(pc$rot[,c(1,2)], type="n")
-# for(i in 1:nrow(pc$rot)) {
-#   text(x=pc$rot[i,1], y=pc$rot[i,2], labels = rownames(pc$rotation# # )[i])
-# }
-# plot(pc$rot[,c(1,3)], type="n")
-# for(i in 1:nrow(pc$rot)) {
-#   text(x=pc$rot[i,1], y=pc$rot[i,3], labels = rownames(pc$rotation# # )[i])
-# }
-# plot(pc$rot[,c(2,3)], type="n")
-# for(i in 1:nrow(pc$rot)) {
-#   text(x=pc$rot[i,2], y=pc$rot[i,3], labels = rownames(pc$rotation# # )[i])
-# }
+          rowsep = rowsep)

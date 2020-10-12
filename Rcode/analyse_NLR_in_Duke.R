@@ -28,9 +28,10 @@ b = barplot(nlr.vec,
         #main = "Neutrophil to Leukocyte Ratio in Duke cohort",
         #ylab = "Relative fraction of \nNLR obtained by Deconvolution",
         ylab="Neutrophil to \nLeukocyte Ratio (NLR)",
-        names.arg = paste0(dat[which.case,]$PTID,
-                           "_",
-                           dat[which.case,]$Time))
+        names.arg = sapply(strsplit(names(nlr.vec), "_Whole.Blood"), "[[", 1))
+        #names.arg = paste0(dat[which.case,]$PTID,
+        #                   "_",
+        #                   dat[which.case,]$Time))
 #legend(x="topright", legend=c("Moderate Illness","Severe Illness"),       fill=c("blue","red"), bty="n")
 #box()
 rm(list=c("dat", "nlr.vec", "which.case","which.lymph"))

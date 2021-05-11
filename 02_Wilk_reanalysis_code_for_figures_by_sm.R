@@ -1,5 +1,5 @@
 # A single-cell atlas of the peripheral immune response in patients with severe COVID-19
-# Wilke et.al.  2020, Nature Medicine
+# Wilk et.al.  2020, Nature Medicine
 
 # Link: https://www.nature.com/articles/s41591-020-0944-y
 # Samanwoy
@@ -7,7 +7,7 @@
 #################################
 ## covid_combined.nc <- readRDS(url("https://hosted-matrices-prod.s3-us-west-2.amazonaws.com/Single_cell_atlas_of_peripheral_immune_response_to_SARS_CoV_2_infection-25/blish_covid.seu.rds"))
 
-## covid_combined.nc = readRDS("D:/not_junk#/Wilke_Covid_nature_medicine/blish_covid.seu.rds")
+## covid_combined.nc = readRDS("D:/not_junk#/Wilk_Covid_nature_medicine/blish_covid.seu.rds")
 
 #################################################
 # start from heare for analysis with bioconductor
@@ -20,7 +20,7 @@ if(file.exists("Data/Wilk_agg_sce.rda")){
   load("Data/Wilk_agg_sce.rda")
   cat("Loading data from file..")
 }else{
-  load("C:/Users/Samanwoy/Documents/Wilk_data/Wilke_sce_calss_object_converted_from_seurat.rda")
+  load("C:/Users/Samanwoy/Documents/Wilk_data/Wilk_sce_calss_object_converted_from_seurat.rda")
 
   # Aggregation across groups or clusters
   #-----------------------------------------
@@ -134,7 +134,7 @@ library(RColorBrewer)
 boxplot(plotdat.n, col = brewer.pal(3, "Oranges"),
         ylab = "Relative Gene Expression \n(Aggregate Log Counts)",
         boxwex = 0.32,
-        main = "Cytokine Storm Gene Expression \nWilke2020")
+        main = "Cytokine Storm Gene Expression \nWilk2020")
 lines(apply(plotdat.n, 2, median), lty=2, lwd=2)
 
 rm(ids, plotdat.n)
